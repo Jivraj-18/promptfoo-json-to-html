@@ -1,27 +1,87 @@
-# PromptFoo JSON to HTML Report
+# PromptFoo JSON to HTML Report Generator
 
-This project provides a simple GitHub Pages deployable solution that allows users to paste PromptFoo JSON evaluation output into a frontend interface and generate a detailed HTML report. The report includes:
+A professional, GitHub Pages deployable solution that converts PromptFoo evaluation JSON output into detailed, visually appealing HTML reports. Perfect for analyzing and sharing AI/LLM evaluation results.
 
-- **Question**: The prompt/question evaluated
-- **Image**: Base64 decoded image (if provided)
-- **Test Cases**: Summary of all test cases with pass/fail status
-- **Endpoint**: The provider endpoint used for evaluation
-- **Details**: Detailed assertion information for failed cases, including expected values and raw student responses
-- **Summary**: Overall count of total, passed, and failed evaluations
+## ✨ Features
 
-## Files
+### 📊 Comprehensive Report Generation
+- **Question Analysis**: Display test questions with proper formatting
+- **Image Support**: Automatic base64 image decoding with format detection (WebP, PNG, JPEG)
+- **Test Status**: Visual pass/fail indicators for all test cases
+- **Scoring**: Percentage-based scoring with color-coded indicators
+- **Response Details**: Expandable sections showing student endpoint responses
+- **Assertion Details**: Detailed failure information including expected vs actual results
 
-- `index.html`: Main HTML page with input and report sections
-- `style.css`: Styling for the report
-- `script.js`: Logic for parsing JSON, generating the report, and rendering HTML
-- `some.json`: Sample PromptFoo JSON evaluation output (for testing)
+### 📈 Advanced Summary Statistics
+- **Test Results**: Total tests, pass/fail counts, success rates
+- **Performance Metrics**: Average scores, latency information, request counts
+- **Assertion Breakdown**: Detailed assertion pass/fail statistics
 
-## Usage
+### 🎨 Professional UI/UX
+- Modern gradient design with responsive layout
+- Color-coded status indicators (green for pass, red for fail)
+- Hover effects and smooth transitions
+- Mobile-friendly responsive design
+- Expandable response sections to manage content density
 
+### 🔧 Technical Features
+- **Error Handling**: Robust JSON validation and error messages
+- **Format Detection**: Automatic image format detection from metadata
+- **Cross-browser Support**: Works on all modern browsers
+- **GitHub Pages Ready**: Zero-configuration deployment
+
+## 📋 Report Structure
+
+The generated HTML report includes:
+
+1. **Header Section**
+   - Evaluation ID and timestamp
+   - Endpoint being evaluated (e.g., `https://tds-project-1-opal-nine.vercel.app/query`)
+
+2. **Main Table**
+   - **Question**: The test question/prompt
+   - **Image**: Base64 decoded images (if present)
+   - **Test Status**: Pass/fail indicators with detailed test descriptions
+   - **Score**: Percentage score for each test case
+   - **Response**: Student endpoint response (expandable)
+   - **Failed Assertions**: Detailed failure information for debugging
+
+3. **Summary Section**
+   - Test results overview
+   - Performance metrics
+   - Assertion statistics
+
+## 🚀 Usage
+
+### Local Development
 1. Clone or download this repository
-2. Open `index.html` in a browser
-3. Paste PromptFoo evaluation JSON into the text area
+2. Open `index.html` in a web browser
+3. Paste your PromptFoo evaluation JSON into the textarea
 4. Click **Generate Report** to view the formatted report
+
+### Example JSON Structure
+```json
+{
+  "evalId": "eval-xxx",
+  "results": {
+    "prompts": [{"provider": "https://your-endpoint.com/query"}],
+    "results": [
+      {
+        "vars": {
+          "question": "Your test question",
+          "image": "base64-encoded-image-data"
+        },
+        "response": {"raw": "endpoint response"},
+        "success": true,
+        "score": 0.85,
+        "gradingResult": {
+          "componentResults": [...]
+        }
+      }
+    ]
+  }
+}
+```
 
 ## Deploying to GitHub Pages
 
