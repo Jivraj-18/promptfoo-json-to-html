@@ -322,6 +322,13 @@ summary:hover {
   font-weight: 600;
 }
 
+.note {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .container {

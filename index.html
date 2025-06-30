@@ -11,13 +11,10 @@
   <div class="container">
     <h1>PromptFoo Evaluation Report Generator</h1>
     <div class="input-container">
-      <div class="input-group">
+      <div class="input-group" style="flex: 1;">
         <label for="json-input">PromptFoo JSON:</label>
         <textarea id="json-input" placeholder="Paste PromptFoo JSON here"></textarea>
-      </div>
-      <div class="input-group">
-        <label for="question-map-input">Question Map JSON (Optional):</label>
-        <textarea id="question-map-input" placeholder="Paste custom question_case_map.json here (optional, will use local file if empty)"></textarea>
+        <p class="note">The report will map questions to IDs using the question_case_map.json file.</p>
       </div>
     </div>
     <button id="generate-btn">Generate Report</button>

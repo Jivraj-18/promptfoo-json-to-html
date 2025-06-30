@@ -5,9 +5,9 @@ A professional, GitHub Pages deployable solution that converts PromptFoo evaluat
 ## ✨ Features
 
 ### 📊 Comprehensive Report Generation
-- **Question ID & Text**: Display test question IDs (e.g., "question1_test1") along with questions
-- **Automatic Question ID Mapping**: Automatically loads question_case_map.json from the local file system to map results to question IDs
-- **Question Mapping**: Optional question_case_map.json support for test case identification
+- **Question ID Mapping**: Uses question_case_map.json to map questions to their correct IDs
+- **Smart Question Matching**: Finds the best match for each question using multiple matching strategies
+- **Separated Question ID & Text**: Displays test question IDs in a separate column for better readability
 - **Image Support**: Automatic base64 image decoding with format detection (WebP, PNG, JPEG)
 - **Test Status**: Visual pass/fail indicators for all test cases
 - **Scoring**: Percentage-based scoring with color-coded indicators
@@ -41,7 +41,8 @@ The generated HTML report includes:
    - Endpoint being evaluated (e.g., `https://tds-project-1-opal-nine.vercel.app/query`)
 
 2. **Main Table**
-   - **Question**: The test question/prompt
+   - **Question ID**: ID from question_case_map.json matching the question text
+   - **Question Text**: The test question/prompt
    - **Image**: Base64 decoded images (if present)
    - **Test Status**: Pass/fail indicators with detailed test descriptions
    - **Score**: Percentage score for each test case
@@ -57,11 +58,10 @@ The generated HTML report includes:
 
 ### Local Development
 1. Clone or download this repository
-2. Place your `question_case_map.json` file in the root directory (or prepare it for input)
+2. Ensure `question_case_map.json` is present in the root directory
 3. Open `index.html` in a web browser
-4. Paste your PromptFoo evaluation JSON into the first textarea
-5. If using a custom question map, paste it into the second textarea (otherwise, the local file will be used automatically)
-6. Click **Generate Report** to view the formatted report
+4. Paste your PromptFoo evaluation JSON into the textarea
+5. Click **Generate Report** to view the formatted report with mapped question IDs
 
 ### Example JSON Structure
 ```json

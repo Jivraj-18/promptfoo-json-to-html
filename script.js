@@ -1,6 +1,62 @@
 // script.js
 
-document.getElementById('generate-btn').addEventListener('click', () => {
+// Load the question_case_map.json file
+async function loadQuestionCaseMap() {
+  try {
+    const response = await fetch('question_case_map.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn("Error loading question_case_map.json:", error);
+    return {};
+  }
+}
+
+// Find the best match for a question in question_case_map
+function findBestQuestionMatch(question, questionMap) {
+  if (!question || typeof question !== 'string') return null;
+  
+  // First try exact match
+  for (const [id, mapItem] of Object.entries(questionMap)) {
+    if (mapItem.question === question) {
+      return id;
+    }
+  }
+  
+  // Try fuzzy match - case insensitive and trimmed
+  const normalizedQuestion = question.trim().toLowerCase();
+  for (const [id, mapItem] of Object.entries(questionMap)) {
+    if (mapItem.question && 
+        mapItem.question.trim().toLowerCase() === normalizedQuestion) {
+      return id;
+    }
+  }
+  
+  // Try contains match
+  for (const [id, mapItem] of Object.entries(questionMap)) {
+    if (mapItem.question && 
+        normalizedQuestion.includes(mapItem.question.trim().toLowerCase())) {
+      return id;
+    }
+  }
+  
+  // Try if question_case_map question is contained in the test question
+  for (const [id, mapItem] of Object.entries(questionMap)) {
+    if (mapItem.question && 
+        mapItem.question.trim().toLowerCase().includes(normalizedQuestion)) {
+      return id;
+    }
+  }
+  
+  return null;
+}
+
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  // Load question_case_map.json
+  const questionMap = await loadQuestionCaseMap();
+  
   const input = document.getElementById('json-input').value;
   let data;
   try {
@@ -29,7 +85,8 @@ document.getElementById('generate-btn').addEventListener('click', () => {
     <table>
       <thead>
         <tr>
-          <th>Question ID & Text</th>
+          <th>Question ID</th>
+          <th>Question Text</th>
           <th>Image</th>
           <th>Test Status</th>
           <th>Score</th>
@@ -46,6 +103,39 @@ document.getElementById('generate-btn').addEventListener('click', () => {
     const question = vars.question || `Test Case ${index + 1}`;
     const score = item.score || 0;
     const status = item.success ? 'PASS' : 'FAIL';
+    
+    // Find question ID using question_case_map.json
+    let fullId = 'N/A';
+    
+    // First try to find a match in the question_case_map
+    if (Object.keys(questionMap).length > 0) {
+      const matchedId = findBestQuestionMatch(question, questionMap);
+      if (matchedId) {
+        fullId = matchedId;
+      }
+    }
+    
+    // If no match found in question_case_map, generate an ID
+    if (fullId === 'N/A') {
+      // Try to get ID from the item directly
+      const itemTestId = item.testId || '';
+      const itemQuestionId = item.questionId || '';
+      
+      if (itemQuestionId && itemTestId) {
+        fullId = `${itemQuestionId}_${itemTestId}`;
+      } else if (item.id && typeof item.id === 'string') {
+        fullId = item.id;
+      } else {
+        // Extract numbers from test case name or generate based on index
+        const questionMatch = question.match(/question\s*(\d+)/i);
+        const testMatch = question.match(/test\s*(\d+)/i);
+        
+        const questionNum = questionMatch ? questionMatch[1] : index + 1;
+        const testNum = testMatch ? testMatch[1] : 1;
+        
+        fullId = `question${questionNum}_test${testNum}`;
+      }
+    }
     
     let imageHtml = '';
     if (vars.image) {
@@ -66,43 +156,8 @@ document.getElementById('generate-btn').addEventListener('click', () => {
       }
     }
 
-    // Try to load and use the question_case_map.json mapping if available
-    let questionMap = {};
-    try {
-      const questionMapInput = document.getElementById('question-map-input').value;
-      if (questionMapInput.trim()) {
-        questionMap = JSON.parse(questionMapInput);
-      }
-    } catch (e) {
-      console.warn("Error parsing question map:", e);
-    }
-    
-    // Find matching test ID from question_case_map
-    let testId = "";
-    if (Object.keys(questionMap).length > 0) {
-      // Try to find matching question and assertion
-      for (const [id, mapItem] of Object.entries(questionMap)) {
-        if (mapItem.question === question) {
-          if (item.gradingResult && item.gradingResult.componentResults && item.gradingResult.componentResults.length > 0) {
-            const assertions = item.gradingResult.componentResults.map(cr => 
-              cr.assertion && cr.assertion.value ? JSON.stringify(cr.assertion.value) : ""
-            );
-            
-            const mapAssertion = mapItem.assertion && mapItem.assertion.value ? 
-              JSON.stringify(mapItem.assertion.value) : "";
-            
-            if (assertions.includes(mapAssertion)) {
-              testId = id;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // Add the test ID to the display if found
-    const testIdDisplay = testId ? 
-      `<div class="test-id-badge">${testId}</div>` : '';
+    // Create test ID badge
+    const testIdDisplay = `<div class="test-id-badge">${fullId}</div>`;
     
     // Process test cases and assertions
     const testInfo = [];
@@ -148,8 +203,10 @@ document.getElementById('generate-btn').addEventListener('click', () => {
 
     html += `
       <tr class="${status.toLowerCase()}">
-        <td class="question-cell">
+        <td class="question-id-cell">
           ${testIdDisplay}
+        </td>
+        <td class="question-cell">
           ${question}
         </td>
         <td class="image-cell">${imageHtml}</td>
