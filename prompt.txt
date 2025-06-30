@@ -1,0 +1,14 @@
+Analyse some.json(json output from a promptfoo evaluation ) file and Create a github pages deploylable solution. 
+
+In the frontend user should be able to paste json similar to some.json. Based on json pasted in frontend it should generate detailed html with proper table format, and summary at the end. 
+
+html must have table with: 
+1. Question
+2. Image : base64 decoded image if there was image othewise leave blank, identify correct file type using image name when passed, use img tag to display image from base64 string.
+3. Information about all test cases if they failed or passed
+4. What endpoint student were evaluated on for example in some.json (which can be accessed using prompts['results']['prompts'][0]['provider'] fromm some.json)
+5. Detailed information about assertion of a test cases if it failed. It must contain what was the test case, what was response of student's endpoint (for example https://tds-project-1-opal-nine.vercel.app/query), 
+
+Generated Html must be professional and visually pleasing.
+
+Create a consise and detailed readme.md file.

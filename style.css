@@ -46,7 +46,25 @@ h2, h3 {
   opacity: 0.9;
 }
 
-#json-input {
+.input-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+#json-input, #question-map-input {
   width: 100%;
   height: 200px;
   padding: 15px;
@@ -58,7 +76,7 @@ h2, h3 {
   transition: border-color 0.3s ease;
 }
 
-#json-input:focus {
+#json-input:focus, #question-map-input:focus {
   outline: none;
   border-color: #667eea;
 }
@@ -124,6 +142,17 @@ tr:hover {
 .question-cell {
   font-weight: 500;
   max-width: 300px;
+}
+
+.test-id-badge {
+  background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+  color: white;
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-bottom: 8px;
+  display: inline-block;
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .image-cell {
@@ -308,5 +337,9 @@ summary:hover {
   img.report-image {
     max-width: 80px;
     max-height: 80px;
+  }
+  
+  .input-container {
+    flex-direction: column;
   }
 }

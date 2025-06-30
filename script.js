@@ -29,7 +29,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
     <table>
       <thead>
         <tr>
-          <th>Question</th>
+          <th>Question ID & Text</th>
           <th>Image</th>
           <th>Test Status</th>
           <th>Score</th>
@@ -66,6 +66,44 @@ document.getElementById('generate-btn').addEventListener('click', () => {
       }
     }
 
+    // Try to load and use the question_case_map.json mapping if available
+    let questionMap = {};
+    try {
+      const questionMapInput = document.getElementById('question-map-input').value;
+      if (questionMapInput.trim()) {
+        questionMap = JSON.parse(questionMapInput);
+      }
+    } catch (e) {
+      console.warn("Error parsing question map:", e);
+    }
+    
+    // Find matching test ID from question_case_map
+    let testId = "";
+    if (Object.keys(questionMap).length > 0) {
+      // Try to find matching question and assertion
+      for (const [id, mapItem] of Object.entries(questionMap)) {
+        if (mapItem.question === question) {
+          if (item.gradingResult && item.gradingResult.componentResults && item.gradingResult.componentResults.length > 0) {
+            const assertions = item.gradingResult.componentResults.map(cr => 
+              cr.assertion && cr.assertion.value ? JSON.stringify(cr.assertion.value) : ""
+            );
+            
+            const mapAssertion = mapItem.assertion && mapItem.assertion.value ? 
+              JSON.stringify(mapItem.assertion.value) : "";
+            
+            if (assertions.includes(mapAssertion)) {
+              testId = id;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Add the test ID to the display if found
+    const testIdDisplay = testId ? 
+      `<div class="test-id-badge">${testId}</div>` : '';
+    
     // Process test cases and assertions
     const testInfo = [];
     const failedDetails = [];
@@ -110,7 +148,10 @@ document.getElementById('generate-btn').addEventListener('click', () => {
 
     html += `
       <tr class="${status.toLowerCase()}">
-        <td class="question-cell">${question}</td>
+        <td class="question-cell">
+          ${testIdDisplay}
+          ${question}
+        </td>
         <td class="image-cell">${imageHtml}</td>
         <td class="status-cell">
           <span class="status-badge ${status.toLowerCase()}">${status}</span>

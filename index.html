@@ -10,7 +10,16 @@
 <body>
   <div class="container">
     <h1>PromptFoo Evaluation Report Generator</h1>
-    <textarea id="json-input" placeholder="Paste PromptFoo JSON here"></textarea>
+    <div class="input-container">
+      <div class="input-group">
+        <label for="json-input">PromptFoo JSON:</label>
+        <textarea id="json-input" placeholder="Paste PromptFoo JSON here"></textarea>
+      </div>
+      <div class="input-group">
+        <label for="question-map-input">Question Map JSON (Optional):</label>
+        <textarea id="question-map-input" placeholder="Paste question_case_map.json here (optional)"></textarea>
+      </div>
+    </div>
     <button id="generate-btn">Generate Report</button>
     <div id="report"></div>
   </div>
