@@ -1,0 +1,121 @@
+{
+  "question1_test1": {
+    "question": "When I am downloading the data folder after processing datagen.py , it is trying to download in root folder and it is facing permission error . how can we overcome this ? needs sudo permission all the time!",
+    "assertion": { "type": "llm-rubric", "value": "Explains no sudo needed if docker and app are configured properly" }
+  },
+  "question1_test2": {
+    "question": "When I am downloading the data folder after processing datagen.py , it is trying to download in root folder and it is facing permission error . how can we overcome this ? needs sudo permission all the time!",
+    "assertion": { "type": "contains", "value": "https://discourse.onlinedegree.iitm.ac.in/t/sudo-permission-needed-to-create-data-folder-in-root/167072" }
+  },
+  "question2_test1": {
+    "question": "Can anyone forward the specified links of the books(iitm certified(logo)) or pdf’s for preparation?",
+    "assertion": { "type": "llm-rubric", "value": "States IITM certified books or PDFs do not exist for TDS" }
+  },
+  "question2_test2": {
+    "question": "Can anyone forward the specified links of the books(iitm certified(logo)) or pdf’s for preparation?",
+    "assertion": { "type": "contains", "value": "https://discourse.onlinedegree.iitm.ac.in/t/tds-iitm-certified-books/163147" }
+  },
+  "question3_test1": {
+    "question": "Can I take the end-term exam without submitting assignments if I missed it due to an emergency?",
+    "assertion": { "type": "llm-rubric", "value": "Confirms end-term exam allowed even if assignments missed" }
+  },
+  "question3_test2": {
+    "question": "Can I take the end-term exam without submitting assignments if I missed it due to an emergency?",
+    "assertion": { "type": "contains", "value": "https://discourse.onlinedegree.iitm.ac.in/t/can-i-take-the-end-term-exam-without-submitting-assignments-if-i-missed-it-due-to-an-emergency/161072/2" }
+  },
+  "question4_test1": {
+    "question": "Will our projects be evaluated with our AIPROXY_TOKEN or a different one?",
+    "assertion": { "type": "llm-rubric", "value": "AIPROXY_TOKEN token could(not nessesary) be used" }
+  },
+  "question4_test2": {
+    "question": "Will our projects be evaluated with our AIPROXY_TOKEN or a different one?",
+    "assertion": { "type": "contains", "value": "https://discourse.onlinedegree.iitm.ac.in/t/project-1-llm-based-automation-agent-discussion-thread-tds-jan-2025/164277/213" }
+  },
+  "question5_test1": {
+    "question": "Is there a repo of mock end term questions for practise?",
+    "assertion": { "type": "llm-rubric", "value": "Confirms mock end term questions available on discourse" }
+  },
+  "question5_test2": {
+    "question": "Is there a repo of mock end term questions for practise?",
+    "assertion": { "type": "contains", "value": "https://discourse.onlinedegree.iitm.ac.in/t/end-term-mock-tds-jan-25/172333" }
+  },
+  "question6_test1": {
+    "question": "What is a good prompt to use for LLMs in this course?",
+    "assertion": { "type": "llm-rubric", "value": "Suggests being clear, direct, and detailed" }
+  },
+  "question6_test2": {
+    "question": "What is a good prompt to use for LLMs in this course?",
+    "assertion": { "type": "llm-rubric", "value": "Suggests giving examples to guide the model" }
+  },
+  "question6_test3": {
+    "question": "What is a good prompt to use for LLMs in this course?",
+    "assertion": {
+      "type": "contains-any",
+      "value": [
+        "https://tds.s-anand.net/#/prompt-engineering",
+        "https://tds.s-anand.net/#/prompt-engineering.md",
+        "https://tds.s-anand.net/prompt-engineering"
+      ]
+    }
+  },
+  "question7_test1": {
+    "question": "How can I use IMDb data to visualize relationships between actors?",
+    "assertion": { "type": "llm-rubric", "value": "Mentions using `networkx` or `scikit-network`" }
+  },
+  "question7_test2": {
+    "question": "How can I use IMDb data to visualize relationships between actors?",
+    "assertion": {
+      "type": "contains-any",
+      "value": [
+        "https://tds.s-anand.net/#/actor-network-visualization.md",
+        "https://tds.s-anand.net/#/actor-network-visualization",
+        "https://tds.s-anand.net/actor-network-visualization"
+      ]
+    }
+  },
+  "question8_test1": {
+    "question": "How can I run my scraping script every day automatically?",
+    "assertion": { "type": "llm-rubric", "value": "Recommends GitHub Actions with a schedule trigger" }
+  },
+  "question8_test2": {
+    "question": "How can I run my scraping script every day automatically?",
+    "assertion": {
+      "type": "contains-any",
+      "value": [
+        "https://tds.s-anand.net/#/scheduled-scraping-with-github-actions.md",
+        "https://tds.s-anand.net/#/scheduled-scraping-with-github-actions",
+        "https://tds.s-anand.net/scheduled-scraping-with-github-actions"
+      ]
+    }
+  },
+  "question9_test1": {
+    "question": "How do I extract structured information like JSON using an LLM?",
+    "assertion": { "type": "llm-rubric", "value": "Suggests using a JSON Schema for structured output" }
+  },
+  "question9_test2": {
+    "question": "How do I extract structured information like JSON using an LLM?",
+    "assertion": {
+      "type": "contains-any",
+      "value": [
+        "https://tds.s-anand.net/#/llm-text-extraction",
+        "https://tds.s-anand.net/#/llm-text-extraction.md",
+        "https://tds.s-anand.net/llm-text-extraction"
+      ]
+    }
+  },
+  "question10_test1": {
+    "question": "How do I delete duplicate entries in Excel?",
+    "assertion": { "type": "contains", "value": "Remove Duplicates" }
+  },
+  "question10_test2": {
+    "question": "How do I delete duplicate entries in Excel?",
+    "assertion": {
+      "type": "contains-any",
+      "value": [
+        "https://tds.s-anand.net/#/data-cleansing-in-excel.md",
+        "https://tds.s-anand.net/#/data-cleansing-in-excel",
+        "https://tds.s-anand.net/data-cleansing-in-excel"
+      ]
+    }
+  }
+}
