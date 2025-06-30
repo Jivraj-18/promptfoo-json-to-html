@@ -13,8 +13,12 @@
     <div class="input-container">
       <div class="input-group" style="flex: 1;">
         <label for="json-input">PromptFoo JSON:</label>
-        <textarea id="json-input" placeholder="Paste PromptFoo JSON here"></textarea>
-        <p class="note">The report will map questions to IDs using the question_case_map.json file.</p>
+        <textarea id="json-input" placeholder="Paste PromptFoo JSON here or upload a file below"></textarea>
+        <div class="file-upload-container">
+          <input type="file" id="json-file-upload" accept=".json" style="display: none;">
+          <button type="button" id="upload-btn" class="upload-btn">📁 Upload JSON File</button>
+        </div>
+        <p class="note">The report will map questions to IDs using the question_case_map.json file. Check browser console for detailed mapping information.</p>
       </div>
     </div>
     <button id="generate-btn">Generate Report</button>

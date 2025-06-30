@@ -4,9 +4,14 @@ A professional, GitHub Pages deployable solution that converts PromptFoo evaluat
 
 ## ✨ Features
 
-### 📊 Comprehensive Report Generation
-- **Question ID Mapping**: Uses question_case_map.json to map questions to their correct IDs
-- **Smart Question Matching**: Finds the best match for each question using multiple matching strategies
+### 📊 Advanced Question Mapping
+- **Exact Matching**: Perfect matches between question text and assertion details
+- **Fuzzy Matching**: Uses Levenshtein distance for partial question matches (60%+ similarity)
+- **Pattern-Based Matching**: Extracts question numbers for intelligent ID generation
+- **Confidence Scoring**: Each mapping includes a confidence percentage (0-100%)
+- **Visual Indicators**: Color-coded badges show mapping quality and source
+- **Mapping Statistics**: Detailed breakdown of mapping success rates in report summary
+- **Validation Tools**: Built-in validation for question_case_map.json structure
 - **Separated Question ID & Text**: Displays test question IDs in a separate column for better readability
 - **Image Support**: Automatic base64 image decoding with format detection (WebP, PNG, JPEG)
 - **Test Status**: Visual pass/fail indicators for all test cases
@@ -22,6 +27,8 @@ A professional, GitHub Pages deployable solution that converts PromptFoo evaluat
 ### 🎨 Professional UI/UX
 - Modern gradient design with responsive layout
 - Color-coded status indicators (green for pass, red for fail)
+- **Enhanced Question ID Badges**: Show confidence scores and mapping types
+- **File Upload Support**: Drag-and-drop or click to upload JSON files
 - Hover effects and smooth transitions
 - Mobile-friendly responsive design
 - Expandable response sections to manage content density
@@ -53,6 +60,25 @@ The generated HTML report includes:
    - Test results overview
    - Performance metrics
    - Assertion statistics
+   - **Question Mapping Statistics**: Success rates and mapping quality metrics
+   - **Interactive Legend**: Visual guide for understanding question ID badge colors
+
+## 🔧 Enhanced Features
+
+### Mapping Quality Indicators
+The system now provides visual feedback on mapping quality:
+
+- **🟢 Exact Match** (Green): Perfect question and assertion match (90-100% confidence)
+- **🟡 Fuzzy Match** (Blue): Partial question match using similarity algorithm (60-89% confidence)  
+- **🟣 Pattern/Special** (Purple): Pattern-based or special logic matching (50-89% confidence)
+- **🟠 Generated** (Orange): Automatically generated from available data
+- **🔴 No Match** (Red): No mapping found, ID generated from question text
+
+### Debug and Validation Tools
+- **Console Logging**: Detailed mapping information in browser console
+- **Mapping Statistics**: Summary of all mapping attempts and success rates
+- **Validation Warnings**: Alerts for duplicate questions or malformed mapping data
+- **File Upload Validation**: JSON validation before processing
 
 ## 🚀 Usage
 

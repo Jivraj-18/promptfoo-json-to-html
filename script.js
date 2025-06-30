@@ -1,17 +1,69 @@
 // script.js
 
-// Add debugging function to help identify mapping issues
+// Enhanced debugging function to help identify mapping issues
 function logMappingDetails(question, assertions, mapResult) {
-  console.group("Question Mapping Details");
-  console.log("Question:", question);
-  console.log("Assertions:", assertions);
+  console.group("🔍 Question Mapping Details");
+  console.log("📝 Question:", question.substring(0, 100) + (question.length > 100 ? '...' : ''));
+  console.log("🎯 Assertions:", assertions?.map(a => `${a.type}: ${a.value?.substring?.(0, 50) || a.value}`));
   
   if (mapResult && mapResult.id) {
-    console.log(`Mapping Result: ${mapResult.id}`);
+    console.log(`✅ Mapping Result: ${mapResult.id}`);
+    console.log(`🎯 Confidence: ${mapResult.confidence}%`);
+    console.log(`📊 Match Type: ${mapResult.matchType}`);
+    
+    // Color-code based on confidence
+    if (mapResult.confidence >= 90) {
+      console.log("🟢 High confidence mapping");
+    } else if (mapResult.confidence >= 70) {
+      console.log("🟡 Medium confidence mapping");
+    } else if (mapResult.confidence >= 50) {
+      console.log("🟠 Low confidence mapping");
+    } else {
+      console.log("🔴 Very low confidence mapping");
+    }
   } else {
-    console.log("No mapping found");
+    console.log("❌ No mapping found");
   }
   
+  console.groupEnd();
+}
+
+// Add mapping statistics tracking
+const mappingStats = {
+  total: 0,
+  exact: 0,
+  fuzzy: 0,
+  generated: 0,
+  failed: 0
+};
+
+function updateMappingStats(matchType) {
+  mappingStats.total++;
+  switch (matchType) {
+    case 'exact-with-assertion':
+    case 'exact-question':
+    case 'exact-question-only':
+      mappingStats.exact++;
+      break;
+    case 'fuzzy-match':
+      mappingStats.fuzzy++;
+      break;
+    case 'pattern-based':
+    case 'special-json':
+      mappingStats.generated++;
+      break;
+    default:
+      mappingStats.failed++;
+  }
+}
+
+function logMappingStatistics() {
+  console.group("📊 Mapping Statistics Summary");
+  console.log(`Total Questions Processed: ${mappingStats.total}`);
+  console.log(`✅ Exact Matches: ${mappingStats.exact} (${((mappingStats.exact/mappingStats.total)*100).toFixed(1)}%)`);
+  console.log(`🔍 Fuzzy Matches: ${mappingStats.fuzzy} (${((mappingStats.fuzzy/mappingStats.total)*100).toFixed(1)}%)`);
+  console.log(`🎯 Generated/Pattern: ${mappingStats.generated} (${((mappingStats.generated/mappingStats.total)*100).toFixed(1)}%)`);
+  console.log(`❌ Failed Mappings: ${mappingStats.failed} (${((mappingStats.failed/mappingStats.total)*100).toFixed(1)}%)`);
   console.groupEnd();
 }
 
@@ -29,9 +81,84 @@ async function loadQuestionCaseMap() {
   }
 }
 
-// Find exact match for a question and assertion in question_case_map.json
+// Validation function for question_case_map.json
+function validateQuestionCaseMap(questionMap) {
+  const validation = {
+    isValid: true,
+    errors: [],
+    warnings: [],
+    stats: {
+      totalEntries: 0,
+      entriesWithAssertions: 0,
+      entriesWithoutQuestions: 0,
+      duplicateQuestions: []
+    }
+  };
+
+  if (!questionMap || typeof questionMap !== 'object') {
+    validation.isValid = false;
+    validation.errors.push("Question case map is not a valid object");
+    return validation;
+  }
+
+  const questionTexts = new Set();
+  const duplicates = new Set();
+
+  for (const [id, entry] of Object.entries(questionMap)) {
+    validation.stats.totalEntries++;
+
+    // Check for required question field
+    if (!entry.question || typeof entry.question !== 'string') {
+      validation.warnings.push(`Entry "${id}" missing or invalid question field`);
+      validation.stats.entriesWithoutQuestions++;
+      continue;
+    }
+
+    // Check for duplicate questions
+    if (questionTexts.has(entry.question)) {
+      duplicates.add(entry.question);
+    } else {
+      questionTexts.add(entry.question);
+    }
+
+    // Count entries with assertions
+    if (entry.assertion) {
+      validation.stats.entriesWithAssertions++;
+      
+      // Validate assertion structure
+      if (!entry.assertion.type) {
+        validation.warnings.push(`Entry "${id}" has assertion without type`);
+      }
+    }
+  }
+
+  // Report duplicates
+  if (duplicates.size > 0) {
+    validation.stats.duplicateQuestions = Array.from(duplicates);
+    validation.warnings.push(`Found ${duplicates.size} duplicate question(s): ${Array.from(duplicates).join(', ')}`);
+  }
+
+  console.group("📋 Question Case Map Validation");
+  console.log(`✅ Total entries: ${validation.stats.totalEntries}`);
+  console.log(`🎯 Entries with assertions: ${validation.stats.entriesWithAssertions}`);
+  console.log(`⚠️ Entries without questions: ${validation.stats.entriesWithoutQuestions}`);
+  
+  if (validation.errors.length > 0) {
+    console.log("❌ Errors:", validation.errors);
+  }
+  
+  if (validation.warnings.length > 0) {
+    console.log("⚠️ Warnings:", validation.warnings);
+  }
+  
+  console.groupEnd();
+
+  return validation;
+}
+
+// Enhanced matching function with fuzzy matching and better fallback logic
 function findMatch(question, assertions, questionMap) {
-  if (!question || typeof question !== 'string') return null;
+  if (!question || typeof question !== 'string') return { id: null, confidence: 0, matchType: 'none' };
   
   // Special case: check if this is an is-json assertion
   if (assertions && assertions.length > 0) {
@@ -40,14 +167,13 @@ function findMatch(question, assertions, questionMap) {
         // For is-json assertions, extract questionId from the question
         const questionMatch = question.match(/question\s*(\d+)/i);
         const questionId = questionMatch ? `question${questionMatch[1]}` : "question1";
-        return { id: `${questionId}_test0` };
+        return { id: `${questionId}_test0`, confidence: 95, matchType: 'special-json' };
       }
     }
   }
   
-  // Look for exact match between question and question_case_map.json
+  // 1. Try exact question match first (highest confidence)
   for (const [id, mapItem] of Object.entries(questionMap)) {
-    // Only use exact question match
     if (mapItem.question === question) {
       // If we have assertions to match
       if (assertions && assertions.length > 0 && mapItem.assertion) {
@@ -60,23 +186,107 @@ function findMatch(question, assertions, questionMap) {
           if (assertion.type === mapAssertionType) {
             if (assertion.value === mapAssertionValue || 
                 (assertion.value !== null && JSON.stringify(assertion.value) === mapAssertionValue)) {
-              return { id };
+              return { id, confidence: 100, matchType: 'exact-with-assertion' };
             }
           }
         }
+        // Question matches but assertion doesn't
+        return { id, confidence: 80, matchType: 'exact-question-only' };
       } else {
-        // If no assertions to match, just match on question
-        return { id };
+        // Perfect match without assertions
+        return { id, confidence: 90, matchType: 'exact-question' };
       }
     }
   }
   
-  return { id: null };
+  // 2. Try fuzzy question matching (medium confidence)
+  const questionLower = question.toLowerCase().trim();
+  let bestMatch = { id: null, confidence: 0, matchType: 'none' };
+  
+  for (const [id, mapItem] of Object.entries(questionMap)) {
+    if (mapItem.question) {
+      const mapQuestionLower = mapItem.question.toLowerCase().trim();
+      
+      // Check for partial matches
+      if (questionLower.includes(mapQuestionLower) || mapQuestionLower.includes(questionLower)) {
+        const similarity = calculateSimilarity(questionLower, mapQuestionLower);
+        if (similarity > bestMatch.confidence && similarity > 60) {
+          bestMatch = { id, confidence: similarity, matchType: 'fuzzy-match' };
+        }
+      }
+    }
+  }
+  
+  if (bestMatch.id) return bestMatch;
+  
+  // 3. Try pattern-based matching (low confidence)
+  const questionNumMatch = question.match(/question\s*(\d+)/i);
+  if (questionNumMatch) {
+    const questionNum = questionNumMatch[1];
+    // Look for IDs that contain this question number
+    for (const id of Object.keys(questionMap)) {
+      if (id.includes(`question${questionNum}`)) {
+        return { id, confidence: 50, matchType: 'pattern-based' };
+      }
+    }
+  }
+  
+  return { id: null, confidence: 0, matchType: 'no-match' };
+}
+
+// Helper function to calculate string similarity
+function calculateSimilarity(str1, str2) {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) return 100;
+  
+  const editDistance = levenshteinDistance(longer, shorter);
+  return Math.round(((longer.length - editDistance) / longer.length) * 100);
+}
+
+// Levenshtein distance calculation
+function levenshteinDistance(str1, str2) {
+  const matrix = [];
+  
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
 }
 
 document.getElementById('generate-btn').addEventListener('click', async () => {
-  // Load question_case_map.json
+  // Reset mapping statistics
+  Object.assign(mappingStats, { total: 0, exact: 0, fuzzy: 0, generated: 0, failed: 0 });
+  
+  // Load and validate question_case_map.json
   const questionMap = await loadQuestionCaseMap();
+  
+  // Validate the question map if it exists
+  if (Object.keys(questionMap).length > 0) {
+    validateQuestionCaseMap(questionMap);
+  } else {
+    console.warn("⚠️ No question_case_map.json found or file is empty. IDs will be generated automatically.");
+  }
   
   const input = document.getElementById('json-input').value;
   let data;
@@ -126,8 +336,11 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     const score = item.score || 0;
     const status = item.success ? 'PASS' : 'FAIL';
     
-    // Find question ID using question_case_map.json
+    // Find question ID using enhanced question_case_map.json matching
     let fullId = 'N/A';
+    let confidence = 0;
+    let matchType = 'none';
+    let badgeClass = 'test-id-badge';
     
     // Extract assertions from the test data
     let assertions = [];
@@ -144,7 +357,7 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       }).filter(a => a); // Remove nulls
     }
     
-    // Try to find an exact match in the question_case_map
+    // Try to find a match in the question_case_map
     if (Object.keys(questionMap).length > 0) {
       const matchResult = findMatch(question, assertions, questionMap);
       // Log mapping details to console for debugging
@@ -152,12 +365,25 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       
       if (matchResult && matchResult.id) {
         fullId = matchResult.id;
+        confidence = matchResult.confidence;
+        matchType = matchResult.matchType;
+        updateMappingStats(matchType);
+        
+        // Set badge class based on match type and confidence
+        if (matchType.includes('exact')) {
+          badgeClass += ' id-mapped';
+        } else if (matchType === 'fuzzy-match') {
+          badgeClass += ' id-probable';
+        } else if (matchType === 'special-json' || matchType === 'pattern-based') {
+          badgeClass += ' id-special';
+        }
       } else {
-        console.warn(`No mapping found for question: "${question.substring(0, 50)}..."`);
+        console.warn(`❌ No mapping found for question: "${question.substring(0, 50)}..."`);
+        updateMappingStats('no-match');
       }
     }
     
-    // If no match found in question_case_map, generate an ID
+    // Enhanced fallback ID generation if no match found in question_case_map
     if (fullId === 'N/A') {
       // Try to get ID from the item directly
       const itemTestId = item.testId || '';
@@ -165,18 +391,25 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       
       if (itemQuestionId && itemTestId) {
         fullId = `${itemQuestionId}_${itemTestId}`;
+        badgeClass += ' id-generated';
+        matchType = 'from-item';
       } else if (item.id && typeof item.id === 'string') {
         fullId = item.id;
+        badgeClass += ' id-generated';
+        matchType = 'from-id';
       } else {
         // Extract numbers from test case name or generate based on index
         const questionMatch = question.match(/question\s*(\d+)/i);
         const testMatch = question.match(/test\s*(\d+)/i);
         
         const questionNum = questionMatch ? questionMatch[1] : index + 1;
-        const testNum = testMatch ? testMatch[1] : 1;
+        const testNum = testMatch ? testMatch[1] : 0;
         
         fullId = `question${questionNum}_test${testNum}`;
+        badgeClass += ' id-not-found';
+        matchType = 'generated';
       }
+      updateMappingStats(matchType);
     }
     
     let imageHtml = '';
@@ -198,8 +431,9 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       }
     }
 
-    // Create test ID badge
-    const testIdDisplay = `<div class="test-id-badge">${fullId}</div>`;
+    // Create enhanced test ID badge with confidence indicator
+    const confidenceDisplay = confidence > 0 ? `<span class="confidence">(${confidence}%)</span>` : '';
+    const testIdDisplay = `<div class="${badgeClass}">${fullId} ${confidenceDisplay}</div>`;
     
     // Process test cases and assertions
     const testInfo = [];
@@ -269,7 +503,10 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
 
   html += '</tbody></table>';
 
-  // Enhanced summary
+  // Log final mapping statistics
+  logMappingStatistics();
+
+  // Enhanced summary with mapping statistics
   const total = results.length;
   const passed = results.filter(r => r.success).length;
   const failed = total - passed;
@@ -301,8 +538,51 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
           <p><strong>Failed:</strong> ${metrics.assertFailCount || 0}</p>
           <p><strong>Errors:</strong> ${metrics.testErrorCount || 0}</p>
         </div>
+        <div class="summary-card">
+          <h4>Question Mapping</h4>
+          <p><strong>Exact Matches:</strong> ${mappingStats.exact}</p>
+          <p><strong>Fuzzy Matches:</strong> ${mappingStats.fuzzy}</p>
+          <p><strong>Generated IDs:</strong> ${mappingStats.generated}</p>
+          <p><strong>Mapping Rate:</strong> ${(((mappingStats.exact + mappingStats.fuzzy)/mappingStats.total) * 100).toFixed(1)}%</p>
+        </div>
+      </div>
+      
+      <!-- Mapping Legend -->
+      <div class="mapping-legend">
+        <h4>Question ID Legend:</h4>
+        <div class="id-legend">
+          <span class="test-id-badge id-mapped">Exact Match</span>
+          <span class="test-id-badge id-probable">Fuzzy Match</span>
+          <span class="test-id-badge id-special">Pattern/Special</span>
+          <span class="test-id-badge id-generated">Generated</span>
+          <span class="test-id-badge id-not-found">No Match</span>
+        </div>
       </div>
     </div>`;
 
   document.getElementById('report').innerHTML = html;
+});
+
+// File upload functionality
+document.getElementById('upload-btn').addEventListener('click', () => {
+  document.getElementById('json-file-upload').click();
+});
+
+document.getElementById('json-file-upload').addEventListener('change', (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        // Validate JSON before setting
+        JSON.parse(e.target.result);
+        document.getElementById('json-input').value = e.target.result;
+        console.log(`✅ Successfully loaded JSON file: ${file.name}`);
+      } catch (error) {
+        alert(`Invalid JSON file: ${error.message}`);
+        console.error('JSON parsing error:', error);
+      }
+    };
+    reader.readAsText(file);
+  }
 });
