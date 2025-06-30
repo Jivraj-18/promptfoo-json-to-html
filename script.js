@@ -1,5 +1,36 @@
 // script.js
 
+// Add debugging function to help identify mapping issues
+function logMappingDetails(question, assertions, mapResult) {
+  console.group("Question Mapping Details");
+  console.log("Question:", question);
+  console.log("Assertions:", assertions);
+  
+  if (mapResult && mapResult.id) {
+    if (mapResult.isSpecialCase) {
+      console.log(`%cSpecial Case Mapping: ${mapResult.id} (JSON Schema)`, 'color: #9c27b0; font-weight: bold');
+    } else if (mapResult.confidence) {
+      const confidencePercent = Math.round(mapResult.confidence * 100);
+      const confidenceLevel = 
+        mapResult.confidence >= 0.9 ? "HIGH" :
+        mapResult.confidence >= 0.5 ? "MEDIUM" : "LOW";
+      
+      const color = 
+        mapResult.confidence >= 0.9 ? '#43a047' :
+        mapResult.confidence >= 0.5 ? '#26c6da' : '#ff9800';
+        
+      console.log(`%cMapping Result: ${mapResult.id} (${confidencePercent}% - ${confidenceLevel})`, 
+        `color: ${color}; font-weight: bold`);
+    } else {
+      console.log("Mapping Result:", mapResult);
+    }
+  } else {
+    console.log("%cNo mapping found", "color: #e53935; font-weight: bold");
+  }
+  
+  console.groupEnd();
+}
+
 // Load the question_case_map.json file
 async function loadQuestionCaseMap() {
   try {
@@ -14,23 +45,108 @@ async function loadQuestionCaseMap() {
   }
 }
 
-// Find the best match for a question in question_case_map
-function findBestQuestionMatch(question, questionMap) {
+// Find the best match for a question and assertion in question_case_map
+// Returns an object with id and confidence level (1.0 = perfect match, 0.0 = no match)
+function findBestMatch(question, assertions, questionMap) {
   if (!question || typeof question !== 'string') return null;
   
+  // Special case: check if this is an is-json assertion
+  if (assertions && assertions.length > 0) {
+    // Look for is-json assertions
+    for (const assertion of assertions) {
+      if (assertion.type === 'is-json') {
+        // If we find an is-json assertion, extract questionId from the question or generate one
+        const questionMatch = question.match(/question\s*(\d+)/i);
+        const questionId = questionMatch ? `question${questionMatch[1]}` : "question1";
+        
+        // Return a special format for is-json assertions: questionid_test0
+        return { id: `${questionId}_test0`, confidence: 0.95, isSpecialCase: true };
+      }
+    }
+  }
+  
+  // Normalize the question for comparison
+  const normalizedQuestion = question.trim().toLowerCase();
+  
+  // First pass: Try to match both question and assertion
+  if (assertions && assertions.length > 0) {
+    for (const [id, mapItem] of Object.entries(questionMap)) {
+      // Try exact question match
+      const questionMatches = (
+        mapItem.question === question ||
+        (mapItem.question && mapItem.question.trim().toLowerCase() === normalizedQuestion)
+      );
+      
+      if (questionMatches) {
+        // Check if assertion matches - exact match first
+        const mapAssertion = mapItem.assertion && mapItem.assertion.value ? 
+          JSON.stringify(mapItem.assertion.value) : "";
+          
+        // Check for direct match using the simple values array
+        if (assertions.simpleValues && assertions.simpleValues.includes(mapAssertion)) {
+          return { id, confidence: 1.0 }; // Found exact assertion match
+        }
+        
+        // Try partial assertion matching with detailed assertion objects
+        if (mapItem.assertion && mapItem.assertion.type) {
+          const mapAssertionType = mapItem.assertion.type;
+          const mapAssertionValue = mapItem.assertion.value;
+          
+          // Check for assertion type matches
+          for (const assertion of assertions) {
+            // Match on assertion type first
+            if (assertion.type === mapAssertionType) {
+              // For exact match
+              if (assertion.value === mapAssertion) {
+                return { id, confidence: 1.0 }; // Perfect match
+              }
+              
+              // For type-specific matching
+              if (mapAssertionType === 'llm-rubric') {
+                if (assertion.value.includes(mapAssertionValue) || 
+                    mapAssertionValue.includes(assertion.value)) {
+                  return { id, confidence: 0.95 }; // Very high confidence rubric match
+                }
+              } 
+              else if (mapAssertionType === 'contains') {
+                if (assertion.value.includes(mapAssertionValue) || 
+                    mapAssertionValue.includes(assertion.value)) {
+                  return { id, confidence: 0.95 }; // Very high confidence contains match
+                }
+              }
+              else if (mapAssertionType === assertion.type) {
+                return { id, confidence: 0.9 }; // Type match but not perfect value match
+              }
+            }
+            
+            // Try fuzzy matching on raw assertion JSON
+            try {
+              if (assertion.raw.includes(JSON.stringify(mapAssertion)) || 
+                  (mapItem.assertion && JSON.stringify(mapItem.assertion).includes(assertion.raw))) {
+                return { id, confidence: 0.85 }; // Good partial match in raw assertion
+              }
+            } catch (e) {
+              // If JSON comparison fails, continue
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Second pass: If no match with both question and assertion, try just question matching
   // First try exact match
   for (const [id, mapItem] of Object.entries(questionMap)) {
     if (mapItem.question === question) {
-      return id;
+      return { id, confidence: 0.8 }; // Exact question match but no assertion match
     }
   }
   
   // Try fuzzy match - case insensitive and trimmed
-  const normalizedQuestion = question.trim().toLowerCase();
   for (const [id, mapItem] of Object.entries(questionMap)) {
     if (mapItem.question && 
         mapItem.question.trim().toLowerCase() === normalizedQuestion) {
-      return id;
+      return { id, confidence: 0.7 }; // Normalized question match
     }
   }
   
@@ -38,7 +154,7 @@ function findBestQuestionMatch(question, questionMap) {
   for (const [id, mapItem] of Object.entries(questionMap)) {
     if (mapItem.question && 
         normalizedQuestion.includes(mapItem.question.trim().toLowerCase())) {
-      return id;
+      return { id, confidence: 0.6 }; // Question contains map question
     }
   }
   
@@ -46,11 +162,11 @@ function findBestQuestionMatch(question, questionMap) {
   for (const [id, mapItem] of Object.entries(questionMap)) {
     if (mapItem.question && 
         mapItem.question.trim().toLowerCase().includes(normalizedQuestion)) {
-      return id;
+      return { id, confidence: 0.5 }; // Map question contains the question
     }
   }
   
-  return null;
+  return { id: null, confidence: 0.0 };
 }
 
 document.getElementById('generate-btn').addEventListener('click', async () => {
@@ -81,6 +197,14 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       <p><strong>Evaluation ID:</strong> ${data.evalId || 'N/A'}</p>
       <p><strong>Timestamp:</strong> ${data.results.timestamp || 'N/A'}</p>
       <p><strong>Endpoint:</strong> ${endpoint}</p>
+      <div class="id-legend">
+        <p><strong>ID Mapping Legend:</strong></p>
+        <span class="test-id-badge id-special">Json</span> JSON schema assertion (automatically mapped)
+        <span class="test-id-badge id-mapped">Mapped</span> High confidence (90-100%)
+        <span class="test-id-badge id-probable">Probable</span> Medium confidence (50-89%)
+        <span class="test-id-badge id-generated">Likely</span> Low confidence (1-49%)
+        <span class="test-id-badge id-not-found">Not Found</span> No mapping available (0%)
+      </div>
     </div>
     <table>
       <thead>
@@ -107,11 +231,45 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     // Find question ID using question_case_map.json
     let fullId = 'N/A';
     
-    // First try to find a match in the question_case_map
+    // Extract assertions from the test data
+    let assertions = [];
+    if (item.gradingResult && item.gradingResult.componentResults && item.gradingResult.componentResults.length > 0) {
+      // Get all assertion details for more accurate matching
+      assertions = item.gradingResult.componentResults.map(cr => {
+        if (cr.assertion) {
+          // Store both the stringified value and raw assertion for better matching
+          return {
+            value: cr.assertion.value ? JSON.stringify(cr.assertion.value) : "",
+            type: cr.assertion.type || "",
+            raw: JSON.stringify(cr.assertion)
+          };
+        }
+        return null;
+      }).filter(a => a); // Remove nulls
+      
+      // Also create a simpler array of just the stringified values for easier matching
+      const simpleAssertions = assertions.map(a => a.value).filter(a => a);
+      assertions.simpleValues = simpleAssertions;
+      
+      // Check if any assertion is of type 'is-json' for special handling
+      assertions.hasIsJsonAssertion = assertions.some(a => a.type === 'is-json');
+    }
+    
+    // First try to find a match in the question_case_map using both question and assertions
     if (Object.keys(questionMap).length > 0) {
-      const matchedId = findBestQuestionMatch(question, questionMap);
-      if (matchedId) {
-        fullId = matchedId;
+      const matchResult = findBestMatch(question, assertions, questionMap);
+      // Log mapping details to console for debugging
+      logMappingDetails(question, assertions, matchResult);
+      
+      if (matchResult && matchResult.id) {
+        fullId = matchResult.id;
+        // Store confidence and special case flag for display
+        item.mappingConfidence = matchResult.confidence;
+        if (matchResult.isSpecialCase) {
+          item.isSpecialCase = true;
+        }
+      } else {
+        console.warn(`No mapping found for question: "${question.substring(0, 50)}..."`);
       }
     }
     
@@ -156,8 +314,33 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       }
     }
 
-    // Create test ID badge
-    const testIdDisplay = `<div class="test-id-badge">${fullId}</div>`;
+    // Create test ID badge with color indicating mapping quality
+    let badgeClass = 'test-id-badge';
+    
+    // Determine badge class based on mapping result
+    if (item.isSpecialCase) {
+      badgeClass += ' id-special'; // Special case (is-json) mapping
+    } else if (item.mappingConfidence !== undefined) {
+      if (item.mappingConfidence >= 0.9) {
+        badgeClass += ' id-mapped'; // High confidence match
+      } else if (item.mappingConfidence >= 0.5) {
+        badgeClass += ' id-probable'; // Medium confidence match
+      } else {
+        badgeClass += ' id-generated'; // Low confidence match
+      }
+    } else {
+      // Legacy fallback
+      badgeClass += fullId === 'N/A' ? ' id-not-found' : 
+                   (fullId.match(/^question\d+_test\d+$/) ? ' id-mapped' : ' id-generated');
+    }
+    
+    // Add confidence percentage if available
+    const confidenceDisplay = item.isSpecialCase ? 
+      ' <span class="confidence">(json)</span>' :
+      (item.mappingConfidence !== undefined ? 
+        ` <span class="confidence">(${Math.round(item.mappingConfidence * 100)}%)</span>` : '');
+                 
+    const testIdDisplay = `<div class="${badgeClass}">${fullId}${confidenceDisplay}</div>`;
     
     // Process test cases and assertions
     const testInfo = [];

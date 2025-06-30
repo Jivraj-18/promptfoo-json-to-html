@@ -322,11 +322,51 @@ summary:hover {
   font-weight: 600;
 }
 
+.id-legend {
+  margin-top: 10px;
+  font-size: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.id-legend .test-id-badge {
+  margin: 0 5px;
+  font-size: 12px;
+}
+
+.id-probable {
+  background: linear-gradient(135deg, #26c6da 0%, #0097a7 100%);
+}
+
+.id-mapped {
+  background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+}
+
+.id-generated {
+  background: linear-gradient(135deg, #ff9800 0%, #ef6c00 100%);
+}
+
+.id-not-found {
+  background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+}
+
+.id-special {
+  background: linear-gradient(135deg, #9c27b0 0%, #6a1b9a 100%);
+}
+
 .note {
   font-size: 14px;
   color: #666;
   margin-top: 5px;
   font-style: italic;
+}
+
+.confidence {
+  opacity: 0.7;
+  font-size: 11px;
+  font-weight: normal;
 }
 
 /* Responsive design */
