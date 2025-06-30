@@ -6,6 +6,7 @@ A professional, GitHub Pages deployable solution that converts PromptFoo evaluat
 
 ### 📊 Comprehensive Report Generation
 - **Question ID & Text**: Display test question IDs (e.g., "question1_test1") along with questions
+- **Automatic Question ID Mapping**: Automatically loads question_case_map.json from the local file system to map results to question IDs
 - **Question Mapping**: Optional question_case_map.json support for test case identification
 - **Image Support**: Automatic base64 image decoding with format detection (WebP, PNG, JPEG)
 - **Test Status**: Visual pass/fail indicators for all test cases
@@ -56,10 +57,11 @@ The generated HTML report includes:
 
 ### Local Development
 1. Clone or download this repository
-2. Open `index.html` in a web browser
-3. Paste your PromptFoo evaluation JSON into the first textarea
-4. (Optional) Paste your question_case_map.json into the second textarea to display test IDs
-5. Click **Generate Report** to view the formatted report
+2. Place your `question_case_map.json` file in the root directory (or prepare it for input)
+3. Open `index.html` in a web browser
+4. Paste your PromptFoo evaluation JSON into the first textarea
+5. If using a custom question map, paste it into the second textarea (otherwise, the local file will be used automatically)
+6. Click **Generate Report** to view the formatted report
 
 ### Example JSON Structure
 ```json

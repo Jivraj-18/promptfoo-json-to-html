@@ -316,6 +316,12 @@ summary:hover {
   font-weight: bold;
 }
 
+.question-id-cell {
+  width: 100px;
+  text-align: center;
+  font-weight: 600;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .container {
