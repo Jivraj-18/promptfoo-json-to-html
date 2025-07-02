@@ -1,46 +1,39 @@
 // script.js
 
-// Simple debugging function
-function logMappingDetails(question, mapResult) {
-  if (mapResult && mapResult.id) {
-    console.log(`✅ Found mapping: "${question}" -> ${mapResult.id}`);
-  } else {
-    console.log(`❌ No mapping found for: "${question}"`);
-  }
-}
-
-// Load the question_case_map.json file
-async function loadQuestionCaseMap() {
+// Helper function to load and parse the question-case mapping
+async function loadQuestionCaseMapping() {
   try {
-    const response = await fetch('question_case_map.json');
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    return await response.json();
+    const response = await fetch('./question_case_map.json');
+    const mapping = await response.json();
+    return mapping;
   } catch (error) {
-    console.warn("Error loading question_case_map.json:", error);
+    console.warn('Could not load question_case_map.json:', error);
     return {};
   }
 }
 
-// Simple exact string matching function
-function findMatch(question, questionMap) {
-  if (!question || typeof question !== 'string') return null;
+// Helper function to find the case for a given question
+function findCaseForQuestion(question, mapping) {
+  if (!question || !mapping) return 'N/A';
   
-  // Look for exact string match in question_case_map.json
-  for (const [id, mapItem] of Object.entries(questionMap)) {
-    if (mapItem.question === question) {
-      return { id };
+  // Direct match
+  if (mapping[question]) {
+    return mapping[question];
+  }
+  
+  // Fuzzy matching - check if question contains any of the mapped questions
+  const normalizedQuestion = question.toLowerCase().trim();
+  for (const mappedQuestion in mapping) {
+    const normalizedMapped = mappedQuestion.toLowerCase().trim();
+    if (normalizedQuestion.includes(normalizedMapped) || normalizedMapped.includes(normalizedQuestion)) {
+      return mapping[mappedQuestion];
     }
   }
   
-  return null;
+  return 'N/A';
 }
 
 document.getElementById('generate-btn').addEventListener('click', async () => {
-  // Load question_case_map.json
-  const questionMap = await loadQuestionCaseMap();
-  
   const input = document.getElementById('json-input').value;
   let data;
   try {
@@ -55,6 +48,9 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     return;
   }
 
+  // Load the question-case mapping
+  const questionCaseMapping = await loadQuestionCaseMapping();
+
   const prompts = data.results.prompts;
   const results = data.results.results;
   const endpoint = prompts[0].provider;
@@ -65,15 +61,16 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       <p><strong>Evaluation ID:</strong> ${data.evalId || 'N/A'}</p>
       <p><strong>Timestamp:</strong> ${data.results.timestamp || 'N/A'}</p>
       <p><strong>Endpoint:</strong> ${endpoint}</p>
-
     </div>
     <table>
       <thead>
         <tr>
-          <th>Question ID</th>
-          <th>Question Text</th>
+          <th>Question</th>
+          <th>Case</th>
           <th>Image</th>
           <th>Test Status</th>
+          <th>HTTP Status</th>
+          <th>Request Metadata</th>
           <th>Score</th>
           <th>Response</th>
           <th>Failed Assertions</th>
@@ -89,29 +86,27 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     const score = item.score || 0;
     const status = item.success ? 'PASS' : 'FAIL';
     
-    // Find question ID using question_case_map.json
-    let fullId = 'N/A';
+    // Find the corresponding case for this question
+    const mappedCase = findCaseForQuestion(question, questionCaseMapping);
     
-    // Try to find an exact match in the question_case_map
-    if (Object.keys(questionMap).length > 0) {
-      const matchResult = findMatch(question, questionMap);
-      logMappingDetails(question, matchResult);
+    // Extract HTTP status code and metadata if available
+    let httpStatusCode = 'N/A';
+    let requestMetadata = '';
+    
+    // Check for HTTP status in metadata
+    if (item.metadata && item.metadata.http && item.metadata.http.status) {
+      const statusCode = item.metadata.http.status;
+      httpStatusCode = statusCode;
       
-      if (matchResult && matchResult.id) {
-        fullId = matchResult.id;
+      // For 4xx or 5xx status codes, provide detailed metadata
+      if (statusCode >= 400 && statusCode < 600) {
+        requestMetadata = `
+          <details>
+            <summary>HTTP ${statusCode} Error</summary>
+            <pre class="metadata-content">${JSON.stringify(item.metadata.http, null, 2)}</pre>
+          </details>
+        `;
       }
-    }
-    
-    // If no match found in question_case_map, generate an ID
-    if (fullId === 'N/A') {
-      // Extract numbers from test case name or generate based on index
-      const questionMatch = question.match(/question\s*(\d+)/i);
-      const testMatch = question.match(/test\s*(\d+)/i);
-      
-      const questionNum = questionMatch ? questionMatch[1] : index + 1;
-      const testNum = testMatch ? testMatch[1] : 0;
-      
-      fullId = `question${questionNum}_test${testNum}`;
     }
     
     let imageHtml = '';
@@ -133,9 +128,6 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       }
     }
 
-    // Create test ID badge
-    const testIdDisplay = `<div class="test-id-badge">${fullId}</div>`;
-    
     // Process test cases and assertions
     const testInfo = [];
     const failedDetails = [];
@@ -180,17 +172,15 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
 
     html += `
       <tr class="${status.toLowerCase()}">
-        <td class="question-id-cell">
-          ${testIdDisplay}
-        </td>
-        <td class="question-cell">
-          ${question}
-        </td>
+        <td class="question-cell">${question}</td>
+        <td class="case-cell">${mappedCase}</td>
         <td class="image-cell">${imageHtml}</td>
         <td class="status-cell">
           <span class="status-badge ${status.toLowerCase()}">${status}</span>
           <div class="test-details">${testInfo.join('')}</div>
         </td>
+        <td class="http-status-cell">${httpStatusCode}</td>
+        <td class="request-metadata-cell">${requestMetadata}</td>
         <td class="score-cell">${(score * 100).toFixed(1)}%</td>
         <td class="response-cell">
           <details>
@@ -204,64 +194,15 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
 
   html += '</tbody></table>';
 
-  // Enhanced summary
-  const total = results.length;
-  const passed = results.filter(r => r.success).length;
-  const failed = total - passed;
-  const avgScore = results.reduce((sum, r) => sum + (r.score || 0), 0) / total;
-  
-  // Metrics from the overall evaluation
-  const metrics = prompts[0].metrics || {};
-  
-  html += `
-    <div class="summary-section">
-      <h3>Evaluation Summary</h3>
-      <div class="summary-grid">
-        <div class="summary-card">
-          <h4>Test Results</h4>
-          <p><strong>Total Tests:</strong> ${total}</p>
-          <p><strong>Passed:</strong> <span class="pass-count">${passed}</span></p>
-          <p><strong>Failed:</strong> <span class="fail-count">${failed}</span></p>
-          <p><strong>Success Rate:</strong> ${((passed/total) * 100).toFixed(1)}%</p>
-        </div>
-        <div class="summary-card">
-          <h4>Performance</h4>
-          <p><strong>Average Score:</strong> ${(avgScore * 100).toFixed(1)}%</p>
-          <p><strong>Total Latency:</strong> ${metrics.totalLatencyMs || 'N/A'}ms</p>
-          <p><strong>Requests:</strong> ${metrics.tokenUsage?.numRequests || 'N/A'}</p>
-        </div>
-        <div class="summary-card">
-          <h4>Assertions</h4>
-          <p><strong>Passed:</strong> ${metrics.assertPassCount || 0}</p>
-          <p><strong>Failed:</strong> ${metrics.assertFailCount || 0}</p>
-          <p><strong>Errors:</strong> ${metrics.testErrorCount || 0}</p>
-        </div>
-      </div>
-    </div>`;
 
   document.getElementById('report').innerHTML = html;
-});
-
-// File upload functionality
-document.getElementById('upload-btn').addEventListener('click', () => {
-  document.getElementById('json-file-upload').click();
-});
-
-document.getElementById('json-file-upload').addEventListener('change', (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        // Validate JSON before setting
-        JSON.parse(e.target.result);
-        document.getElementById('json-input').value = e.target.result;
-        console.log(`✅ Successfully loaded JSON file: ${file.name}`);
-      } catch (error) {
-        alert(`Invalid JSON file: ${error.message}`);
-        console.error('JSON parsing error:', error);
-      }
-    };
-    reader.readAsText(file);
-  }
+  
+  // Add class to HTTP status cells with error codes (4xx or 5xx)
+  const statusCells = document.querySelectorAll('.http-status-cell');
+  statusCells.forEach(cell => {
+    const statusCode = parseInt(cell.textContent);
+    if (statusCode >= 400 && statusCode < 600) {
+      cell.classList.add('error');
+    }
+  });
 });
